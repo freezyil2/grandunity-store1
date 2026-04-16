@@ -2,19 +2,33 @@ import { useEffect, useState } from 'react'
 import { buyPackage } from '../api/tebex.js'
 
 export default function PackageModal({ pkg, onClose }) {
+  if (!pkg) return null
+  return <ModalInner pkg={pkg} onClose={onClose} />
+}
+
+function ModalInner({ pkg, onClose }) {
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', onKey)
-    document.body.style.overflow = 'hidden'
+    const scrollY = window.scrollY || window.pageYOffset || 0
+    document.body.classList.add('modal-open')
+    document.body.style.position = 'fixed'
+    document.body.style.top = `-${scrollY}px`
+    document.body.style.width = '100%'
     return () => {
       window.removeEventListener('keydown', onKey)
-      document.body.style.overflow = ''
+      document.body.classList.remove('modal-open')
+      const top = document.body.style.top
+      document.body.style.position = ''
+      document.body.style.top = ''
+      document.body.style.width = ''
+      const restoreY = Math.abs(parseInt(top || '0', 10)) || 0
+      document.body.style.width = ''
+      window.scrollTo(0, restoreY)
     }
   }, [onClose])
-
-  if (!pkg) return null
 
   const handleBuy = async () => {
     try {

@@ -81,17 +81,27 @@ export default function Home() {
 
             {!loading && cats.length > 0 && (
               <section className="py-4">
-                <h2 className="text-2xl md:text-3xl font-bold text-white mb-6">קטגוריות</h2>
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                <div className="flex items-center justify-between gap-4 mb-6">
+                  <h2 className="text-2xl md:text-3xl font-bold text-white">קטגוריות</h2>
+                  <span className="text-sm text-gray-400">בחרו קטגוריה כדי לעבור במהירות לאזור המתאים</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                   {cats.map((c) => (
                     <Link
                       key={c.id}
                       to={`/category/${c.id}`}
-                      className="card p-4 text-center hover:bg-brand/10"
+                      className="card p-5 hover:bg-brand/10 bg-bg-card/80 backdrop-blur"
                     >
-                      <div className="text-white font-semibold">{c.name}</div>
-                      <div className="text-xs text-gray-400 mt-1">
-                        {c.packages?.length || 0} מוצרים
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="text-right">
+                          <div className="text-white font-bold text-lg">{c.name}</div>
+                          <div className="text-sm text-gray-400 mt-1">
+                            {c.packages?.length || 0} מוצרים
+                          </div>
+                        </div>
+                        <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-brand/10 text-brand-light text-lg">
+                          →
+                        </span>
                       </div>
                     </Link>
                   ))}

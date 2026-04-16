@@ -1,11 +1,45 @@
 import { useEffect, useState } from 'react'
 
 const DISCORD_INVITE = import.meta.env.VITE_DISCORD_INVITE || 'https://discord.gg/grandunity'
-const COPY_TAG = 'GRRP'
+const SERVER_STATUS_URL = import.meta.env.VITE_SERVER_STATUS_URL
+const FIVEM_SERVER_ID = import.meta.env.VITE_FIVEM_SERVER_ID
+
+async function fetchServerStatus() {
+  // Option A: custom endpoint (recommended)
+  // Expected JSON (example):
+  // { "online": true, "players": 128, "maxPlayers": 256, "name": "GrandUnity RP" }
+  if (SERVER_STATUS_URL) {
+    const res = await fetch(SERVER_STATUS_URL, { cache: 'no-store' })
+    if (!res.ok) throw new Error('status_fetch_failed')
+    const data = await res.json()
+    return {
+      online: Boolean(data?.online),
+      players: Number.isFinite(Number(data?.players)) ? Number(data.players) : null,
+      maxPlayers: Number.isFinite(Number(data?.maxPlayers)) ? Number(data.maxPlayers) : null,
+      name: data?.name ? String(data.name) : null,
+    }
+  }
+
+  // Option B: FiveM public API (needs server id)
+  if (FIVEM_SERVER_ID) {
+    const res = await fetch(`https://servers-frontend.fivem.net/api/servers/single/${FIVEM_SERVER_ID}`, { cache: 'no-store' })
+    if (!res.ok) throw new Error('status_fetch_failed')
+    const data = await res.json()
+    const d = data?.Data
+    return {
+      online: true,
+      players: Number.isFinite(Number(d?.clients)) ? Number(d.clients) : null,
+      maxPlayers: Number.isFinite(Number(d?.sv_maxclients)) ? Number(d.sv_maxclients) : null,
+      name: d?.hostname ? String(d.hostname) : null,
+    }
+  }
+
+  return null
+}
 
 export default function Hero() {
   const [members, setMembers] = useState(0)
-  const [copied, setCopied] = useState(false)
+  const [server, setServer] = useState({ state: 'idle', online: false, players: null, maxPlayers: null, name: null })
 
   // Try to fetch live member count from Discord widget (works only if widget is enabled)
   useEffect(() => {
@@ -16,13 +50,34 @@ export default function Hero() {
       .catch(() => {})
   }, [])
 
-  const onCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(COPY_TAG)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    } catch {}
-  }
+  useEffect(() => {
+    let alive = true
+    let t = 0
+
+    const tick = async () => {
+      try {
+        if (!alive) return
+        setServer((s) => ({ ...s, state: 'loading' }))
+        const next = await fetchServerStatus()
+        if (!alive) return
+        if (!next) {
+          setServer({ state: 'unconfigured', online: false, players: null, maxPlayers: null, name: null })
+          return
+        }
+        setServer({ state: 'ready', ...next })
+      } catch {
+        if (!alive) return
+        setServer({ state: 'error', online: false, players: null, maxPlayers: null, name: null })
+      }
+    }
+
+    tick()
+    t = window.setInterval(tick, 15000)
+    return () => {
+      alive = false
+      window.clearInterval(t)
+    }
+  }, [])
 
   return (
     <section className="relative">
@@ -37,26 +92,40 @@ export default function Hero() {
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-10">
         <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-6">
-          {/* Left card - copy tag */}
-          <button
-            onClick={onCopy}
-            className="group flex items-center gap-3 bg-bg-card/80 border border-bg-border hover:border-brand/60 rounded-xl p-3 transition shadow-lg backdrop-blur"
-          >
-            <span className="flex items-center justify-center w-12 h-12 rounded-lg bg-brand text-white text-xl shadow-glow">
-              ▶
+          {/* Left card - server status */}
+          <div className="group flex items-center gap-3 bg-bg-card/80 border border-bg-border hover:border-brand/60 rounded-xl p-3 transition shadow-lg backdrop-blur">
+            <span
+              className={`flex items-center justify-center w-12 h-12 rounded-lg text-white text-xl shadow-glow ${
+                server.state === 'ready' && server.online
+                  ? 'bg-emerald-500/20 text-emerald-300 shadow-[0_0_25px_rgba(16,185,129,0.35)]'
+                  : server.state === 'loading'
+                    ? 'bg-brand/20 text-brand-light'
+                    : 'bg-rose-500/15 text-rose-300 shadow-[0_0_25px_rgba(244,63,94,0.25)]'
+              }`}
+              aria-hidden="true"
+            >
+              {server.state === 'loading' ? '…' : server.state === 'ready' && server.online ? '●' : '○'}
             </span>
-            <span className="text-right flex-1">
+            <span className="text-right flex-1 min-w-0">
               <span className="flex items-center gap-2 justify-start">
-                <span className="font-extrabold text-white text-lg">{COPY_TAG}</span>
+                <span className="font-extrabold text-white text-lg">
+                  סטטוס שרת
+                </span>
                 <span className="text-xs bg-brand/20 text-brand-light px-2 py-0.5 rounded-md font-semibold">
-                  0
+                  LIVE
                 </span>
               </span>
-              <span className="block text-[11px] text-gray-400 tracking-widest">
-                {copied ? 'COPIED!' : 'CLICK TO COPY'}
+              <span className="block text-[11px] text-gray-400 tracking-widest uppercase">
+                {server.state === 'unconfigured'
+                  ? 'NOT CONFIGURED'
+                  : server.state === 'loading'
+                    ? 'CHECKING…'
+                    : server.state === 'ready' && server.online
+                      ? `ONLINE${server.players != null ? ` • ${server.players}${server.maxPlayers ? `/${server.maxPlayers}` : ''}` : ''}`
+                      : 'OFFLINE'}
               </span>
             </span>
-          </button>
+          </div>
 
           {/* Center logo */}
           <div className="flex justify-center order-first md:order-none">

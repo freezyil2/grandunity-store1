@@ -6,6 +6,11 @@
   color-scheme: dark;
 }
 
+html {
+  scroll-behavior: smooth;
+  scrollbar-gutter: stable;
+}
+
 body {
   @apply bg-bg-base text-gray-100 font-display antialiased;
   background-image:
@@ -15,7 +20,20 @@ body {
     linear-gradient(180deg, #0a0612 0%, #05030a 100%);
   background-attachment: fixed;
   min-height: 100vh;
+  overflow-x: hidden;
   overflow-y: auto;
+  overscroll-behavior-y: auto;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  body {
+    background-attachment: scroll;
+  }
+}
+
+body.modal-open {
+  overflow: hidden;
+  touch-action: none;
 }
 
 /* Floating particles background */
@@ -40,6 +58,19 @@ body {
 ::-webkit-scrollbar-track { background: #0a0612; }
 ::-webkit-scrollbar-thumb { background: #2a1a3f; border-radius: 6px; }
 ::-webkit-scrollbar-thumb:hover { background: #a855f7; }
+
+.category-nav-scroll::-webkit-scrollbar {
+  height: 4px;
+}
+
+.category-nav-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.category-nav-scroll::-webkit-scrollbar-thumb {
+  background: rgba(168, 85, 247, 0.35);
+  border-radius: 999px;
+}
 
 @layer components {
   .btn-primary {
